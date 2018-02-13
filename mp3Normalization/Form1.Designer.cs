@@ -37,11 +37,11 @@
             this.textGain = new System.Windows.Forms.TextBox();
             this.listView1 = new System.Windows.Forms.ListView();
             this.buttonAddFiles = new System.Windows.Forms.Button();
-            this.checkFileConversion = new System.Windows.Forms.CheckBox();
-            this.checkTempFIle = new System.Windows.Forms.CheckBox();
+            this.chkConverFilename = new System.Windows.Forms.CheckBox();
+            this.chkUsingTempfile = new System.Windows.Forms.CheckBox();
             this.buttonSaveList = new System.Windows.Forms.Button();
             this.buttonLoadList = new System.Windows.Forms.Button();
-            this.checkBox1DisableMp3gain = new System.Windows.Forms.CheckBox();
+            this.chkDisableMp3gain = new System.Windows.Forms.CheckBox();
             this.textTempDir = new System.Windows.Forms.TextBox();
             this.buttonTempDir = new System.Windows.Forms.Button();
             this.buttonAddFolders = new System.Windows.Forms.Button();
@@ -134,25 +134,25 @@
             this.buttonAddFiles.UseVisualStyleBackColor = true;
             this.buttonAddFiles.Click += new System.EventHandler(this.buttonAddFiles_Click);
             // 
-            // checkFileConversion
+            // chkConverFilename
             // 
-            this.checkFileConversion.AutoSize = true;
-            this.checkFileConversion.Location = new System.Drawing.Point(263, 25);
-            this.checkFileConversion.Name = "checkFileConversion";
-            this.checkFileConversion.Size = new System.Drawing.Size(96, 16);
-            this.checkFileConversion.TabIndex = 9;
-            this.checkFileConversion.Text = "파일이름변환";
-            this.checkFileConversion.UseVisualStyleBackColor = true;
+            this.chkConverFilename.AutoSize = true;
+            this.chkConverFilename.Location = new System.Drawing.Point(252, 25);
+            this.chkConverFilename.Name = "chkConverFilename";
+            this.chkConverFilename.Size = new System.Drawing.Size(121, 16);
+            this.chkConverFilename.TabIndex = 9;
+            this.chkConverFilename.Text = "convert file name";
+            this.chkConverFilename.UseVisualStyleBackColor = true;
             // 
-            // checkTempFIle
+            // chkUsingTempfile
             // 
-            this.checkTempFIle.AutoSize = true;
-            this.checkTempFIle.Location = new System.Drawing.Point(379, 25);
-            this.checkTempFIle.Name = "checkTempFIle";
-            this.checkTempFIle.Size = new System.Drawing.Size(96, 16);
-            this.checkTempFIle.TabIndex = 10;
-            this.checkTempFIle.Text = "임시파일사용";
-            this.checkTempFIle.UseVisualStyleBackColor = true;
+            this.chkUsingTempfile.AutoSize = true;
+            this.chkUsingTempfile.Location = new System.Drawing.Point(379, 25);
+            this.chkUsingTempfile.Name = "chkUsingTempfile";
+            this.chkUsingTempfile.Size = new System.Drawing.Size(107, 16);
+            this.chkUsingTempfile.TabIndex = 10;
+            this.chkUsingTempfile.Text = "using temp file";
+            this.chkUsingTempfile.UseVisualStyleBackColor = true;
             // 
             // buttonSaveList
             // 
@@ -174,15 +174,15 @@
             this.buttonLoadList.UseVisualStyleBackColor = true;
             this.buttonLoadList.Click += new System.EventHandler(this.buttonLoadList_Click);
             // 
-            // checkBox1DisableMp3gain
+            // chkDisableMp3gain
             // 
-            this.checkBox1DisableMp3gain.AutoSize = true;
-            this.checkBox1DisableMp3gain.Location = new System.Drawing.Point(501, 24);
-            this.checkBox1DisableMp3gain.Name = "checkBox1DisableMp3gain";
-            this.checkBox1DisableMp3gain.Size = new System.Drawing.Size(144, 16);
-            this.checkBox1DisableMp3gain.TabIndex = 13;
-            this.checkBox1DisableMp3gain.Text = "mp3gain사용하지않기";
-            this.checkBox1DisableMp3gain.UseVisualStyleBackColor = true;
+            this.chkDisableMp3gain.AutoSize = true;
+            this.chkDisableMp3gain.Location = new System.Drawing.Point(501, 24);
+            this.chkDisableMp3gain.Name = "chkDisableMp3gain";
+            this.chkDisableMp3gain.Size = new System.Drawing.Size(129, 16);
+            this.chkDisableMp3gain.TabIndex = 13;
+            this.chkDisableMp3gain.Text = "don\'t use mp3gain";
+            this.chkDisableMp3gain.UseVisualStyleBackColor = true;
             // 
             // textTempDir
             // 
@@ -219,11 +219,11 @@
             this.Controls.Add(this.buttonAddFolders);
             this.Controls.Add(this.buttonTempDir);
             this.Controls.Add(this.textTempDir);
-            this.Controls.Add(this.checkBox1DisableMp3gain);
+            this.Controls.Add(this.chkDisableMp3gain);
             this.Controls.Add(this.buttonLoadList);
             this.Controls.Add(this.buttonSaveList);
-            this.Controls.Add(this.checkTempFIle);
-            this.Controls.Add(this.checkFileConversion);
+            this.Controls.Add(this.chkUsingTempfile);
+            this.Controls.Add(this.chkConverFilename);
             this.Controls.Add(this.buttonAddFiles);
             this.Controls.Add(this.listView1);
             this.Controls.Add(this.textGain);
@@ -251,11 +251,11 @@
         private System.Windows.Forms.TextBox textGain;
         private System.Windows.Forms.ListView listView1;
         private System.Windows.Forms.Button buttonAddFiles;
-        private System.Windows.Forms.CheckBox checkFileConversion;
-        private System.Windows.Forms.CheckBox checkTempFIle;
+        private System.Windows.Forms.CheckBox chkConverFilename;
+        private System.Windows.Forms.CheckBox chkUsingTempfile;
         private System.Windows.Forms.Button buttonSaveList;
         private System.Windows.Forms.Button buttonLoadList;
-        private System.Windows.Forms.CheckBox checkBox1DisableMp3gain;
+        private System.Windows.Forms.CheckBox chkDisableMp3gain;
         private System.Windows.Forms.TextBox textTempDir;
         private System.Windows.Forms.Button buttonTempDir;
         private System.Windows.Forms.Button buttonAddFolders;

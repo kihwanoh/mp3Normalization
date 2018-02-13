@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -34,9 +35,9 @@ namespace mp3Normalization
             this.Size = Properties.Settings.Default.Size;
             //this.Location = Properties.Settings.Default.Location;
             this.textGain.Text = Properties.Settings.Default.TargetGain;
-            this.checkFileConversion.CheckState = Properties.Settings.Default.FileConversion;
-            this.checkTempFIle.CheckState = Properties.Settings.Default.UseTempFile;
-            this.checkBox1DisableMp3gain.CheckState = Properties.Settings.Default.DisableMp3gain;
+            this.chkConverFilename.CheckState = Properties.Settings.Default.FileConversion;
+            this.chkUsingTempfile.CheckState = Properties.Settings.Default.UseTempFile;
+            this.chkDisableMp3gain.CheckState = Properties.Settings.Default.DisableMp3gain;
             this.textTempDir.Text = Properties.Settings.Default.TempDirectory;
 
             listView1.View = View.Details;
@@ -65,9 +66,9 @@ namespace mp3Normalization
             Properties.Settings.Default.Size = this.Size;
             //Properties.Settings.Default.Location = this.Location;
             Properties.Settings.Default.TargetGain = this.textGain.Text;
-            Properties.Settings.Default.FileConversion = this.checkFileConversion.CheckState;
-            Properties.Settings.Default.UseTempFile = this.checkTempFIle.CheckState;
-            Properties.Settings.Default.DisableMp3gain = this.checkBox1DisableMp3gain.CheckState;
+            Properties.Settings.Default.FileConversion = this.chkConverFilename.CheckState;
+            Properties.Settings.Default.UseTempFile = this.chkUsingTempfile.CheckState;
+            Properties.Settings.Default.DisableMp3gain = this.chkDisableMp3gain.CheckState;
             Properties.Settings.Default.TempDirectory = this.textTempDir.Text;
             Properties.Settings.Default.Save();
 
@@ -106,16 +107,178 @@ namespace mp3Normalization
             }
         }
 
+        /// <summary>
+        /// Get the stderr/stdout outputs of a process and return when the process is done.
+        /// Both <b>must</b> be read or the process will block on windows.
+        /// </summary>
+        /// <param name="process">The process to get the ouput from</param>
+        /// <param name="errorOutput">The array to store the stderr output. cannot be null.</param>
+        /// <param name="stdOutput">The array to store the stdout output. cannot be null.</param>
+        /// <param name="waitforReaders">if true, this will wait for the reader threads.</param>
+        /// <returns>the process return code.</returns>
+        private int GrabProcessOutput(Process process, List<String> errorOutput, List<String> stdOutput, bool waitforReaders)
+        {
+            if (errorOutput == null)
+            {
+                throw new ArgumentNullException("errorOutput");
+            }
+            if (stdOutput == null)
+            {
+                throw new ArgumentNullException("stdOutput");
+            }
+            // read the lines as they come. if null is returned, it's
+            // because the process finished
+            Thread t1 = new Thread(new ThreadStart(delegate {
+                // create a buffer to read the stdoutput
+                try
+                {
+                    using (StreamReader sr = process.StandardError)
+                    {
+                        while (!sr.EndOfStream)
+                        {
+                            String line = sr.ReadLine();
+                            if (!String.IsNullOrEmpty(line))
+                            {
+                                Debug.Print(line);
+                                errorOutput.Add(line);
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // do nothing.
+                }
+            }));
+
+            Thread t2 = new Thread(new ThreadStart(delegate {
+                // create a buffer to read the std output
+                try
+                {
+                    using (StreamReader sr = process.StandardOutput)
+                    {
+                        while (!sr.EndOfStream)
+                        {
+                            String line = sr.ReadLine();
+                            if (!String.IsNullOrEmpty(line))
+                            {
+                                numOutputLines++;
+
+                                stdOutput.Add(line);
+                                Debug.Print(line);
+#if true    //
+                                char[] delimiterChars = { '\t', '\r' };
+                                string[] strArray = line.Split(delimiterChars);
+                                if (rcvState == enmRcvState.found)
+                                {
+                                    if (strArray[1] == "NA")
+                                        rcvState = enmRcvState.NA;
+                                    if (strArray[1] != "NA")
+                                    {
+                                        rcvState = enmRcvState.value;
+                                        ModifydBGain = strArray[2]; //ModifydBGain
+                                        Debug.WriteLine(strArray[2]);
+                                    }
+                                }
+                                else if (rcvState == enmRcvState.idle && strArray[0] == "File")
+                                    rcvState = enmRcvState.found;
+#endif
+                            }
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // do nothing.
+                }
+            }));
+
+            t1.Start();
+            t2.Start();
+
+            // it looks like on windows process#waitFor() can return
+            // before the thread have filled the arrays, so we wait for both threads and the
+            // process itself.
+            if (waitforReaders)
+            {
+                try
+                {
+                    t1.Join();
+                }
+                catch (ThreadInterruptedException)
+                {
+                }
+                try
+                {
+                    t2.Join();
+                }
+                catch (ThreadInterruptedException)
+                {
+                }
+            }
+
+            // get the return code from the process
+            process.WaitForExit();
+            return process.ExitCode;
+        }
+
+
         private void checkMp3(string fname, string args, bool async = true)
         {
+            rcvState = enmRcvState.idle;
+            numOutputLines = 0;
+            if (chkUsingTempfile.Checked)
+            {
+                if (File.Exists("tmp.mp3")) File.Delete("tmp.mp3");
+                File.Move(fname, "tmp.mp3");
+                //File.Copy(fname, "tmp.mp3");
+            }
+
+
+#if true
+            int status = -1;
+
+            try
+            {
+                String command = "\\mp3gain.exe";
+                Debug.Print(String.Format("Launching '{0}'", Application.StartupPath + command));
+                ProcessStartInfo psi = new ProcessStartInfo(Application.StartupPath + command);
+                if (chkUsingTempfile.Checked)
+                    psi.Arguments = " " + args + " " + "\"" + "tmp.mp3" + "\"" + "";
+                else
+                    psi.Arguments = " " + args + " " + "\"" + fname + "\"" + "";
+                psi.CreateNoWindow = true;
+                psi.WindowStyle = ProcessWindowStyle.Hidden;
+                psi.UseShellExecute = false;
+                psi.RedirectStandardError = true;
+                psi.RedirectStandardOutput = true;
+
+                using (Process proc = Process.Start(psi))
+                {
+                    List<String> errorOutput = new List<String>();
+                    List<String> stdOutput = new List<String>();
+                    status = GrabProcessOutput(proc, errorOutput, stdOutput, false /* waitForReaders */);
+                }
+            }
+            catch (IOException ioe)
+            {
+                Debug.Print("Unable to run: {0}", ioe.Message);
+            }
+            catch (ThreadInterruptedException ie)
+            {
+                Debug.Print("Unable to run: {0}", ie.Message);
+            }
+            catch (Exception e)
+            {
+                Debug.Print(e.Message);
+            }
+#else
             rcvState = enmRcvState.idle;
 
             Process pp = new Process();
 
-            numOutputLines = 0;
-
             pp.StartInfo.Arguments = " " + args + " " + "\"" + fname + "\"" + "";
-            if (checkTempFIle.Checked)
+            if (chkUsingTempfile.Checked)
             {
                 if (File.Exists("tmp.mp3")) File.Delete("tmp.mp3");
                 File.Move(fname, "tmp.mp3");
@@ -143,8 +306,9 @@ namespace mp3Normalization
             Debug.WriteLine(Output.ToString());
             textView.Text = Output.ToString();
             Output.Clear();
+#endif
 
-            if (checkTempFIle.Checked)
+            if (chkUsingTempfile.Checked)
             {
                 File.Move("tmp.mp3", fname);
             }
@@ -154,9 +318,16 @@ namespace mp3Normalization
         private void singleFileProcessing(string fname, bool boolSetGain)
         {
             textFilePath.Text = fname;
-            if (checkBox1DisableMp3gain.Checked)
+            if (chkDisableMp3gain.Checked)
                 return;
 
+            // mp3gain option
+            //
+            // /g <i>  - apply gain i to mp3 without doing any analysis
+            // /p - Preserve original file timestamp
+            // /o - output is a database-friendly tab-delimited list
+            // /s c - only check stored tag info (no other processing)
+            // /s r - force re-calculation (do not read tag info)
             checkMp3(fname, " /o /s c ");
             if (rcvState == enmRcvState.NA)
             {
@@ -179,7 +350,7 @@ namespace mp3Normalization
         private void mp3Normalization(string[] FileNames, bool boolSetGain = true)
         {
 
-            // 최대,최소,간격을 임의로 조정
+            // set up progressbar parameter
             progressConvert.Style = ProgressBarStyle.Continuous;
             progressConvert.Minimum = 0;
             progressConvert.Step = 1;
@@ -192,6 +363,8 @@ namespace mp3Normalization
                 string fileName = Path.GetFileName(fname);
                 string[] fileNameArray = fileName.Split('.');
                 string filePath = Path.GetDirectoryName(fname);
+
+                // set up location to store converted filename
                 if (textTempDir.Text != null)
                     filePath = textTempDir.Text;
                 Debug.WriteLine(fileName);
@@ -200,10 +373,12 @@ namespace mp3Normalization
                 string strDate = dtNow.ToString("yyyy-MM-dd");
                 string strPath = string.Format("{0}\\{1}-{2,4:D4}.{3}", filePath, strDate, intSeed++, fileNameArray.Last());
 
-                if (checkFileConversion.Checked)
+                if (chkConverFilename.Checked)
                 {
+                    // need filename conversion because mp3gainGUI can't handle unicode filename
                     while (File.Exists(strPath))
                     {
+                        // increase file index in case of existing old one already
                         strPath = string.Format("{0}\\{1}-{2,4:D4}.{3}", filePath, strDate, intSeed++, fileNameArray.Last());
                     }
                     File.Move(fname, strPath);
@@ -214,16 +389,18 @@ namespace mp3Normalization
                 {
                     singleFileProcessing(fname, boolSetGain);
                 }
+
+                // update listbox with converted information
                 if (ModifydBGain == "") ModifydBGain = "0.0";
 
                 string strRadioGain = string.Format("{0:F1}", 89.0 - Math.Round(double.Parse(ModifydBGain), 1));
                 string strTrackGain = string.Format("{0:F1}", double.Parse(textGain.Text) - 89.0 + Math.Round(double.Parse(ModifydBGain), 1));
-                if (checkBox1DisableMp3gain.Checked)
+                if (chkDisableMp3gain.Checked)
                 {
                     strRadioGain = "";
                     strTrackGain = "";
                 }
-                string[] aa = { fname, strRadioGain, strTrackGain, checkFileConversion.Checked ? strPath : "" };
+                string[] aa = { fname, strRadioGain, strTrackGain, chkConverFilename.Checked ? strPath : "" };
 
                 ListViewItem newitem = new ListViewItem(aa);
                 listView1.Items.Add(newitem);
@@ -233,10 +410,12 @@ namespace mp3Normalization
                 listView1.Columns[2].TextAlign = HorizontalAlignment.Center;
                 TXTLog(string.Format("{0} {1} {2}", aa[0], aa[1], aa[2]));
 
+                // update progressbar
                 progressConvert.PerformStep();
             }
 
-            if (MessageBox.Show("작업이 완료되었습니다. 리스트를 저장하시겠습니까?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            // save listfile
+            //if (MessageBox.Show("Complete the work! save the list?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 string filePath = Path.GetDirectoryName(listView1.Items[0].Text);
                 DateTime dtNow = DateTime.Now;
